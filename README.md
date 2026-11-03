@@ -108,3 +108,14 @@ node --check engine.js
 ```
 
 There is no build command. You can deploy this same folder to any static website host.
+
+## Word-by-word WPM and smooth result charts
+
+After a test, select **Show words history** to see each word's individually calculated WPM.
+Select a word to inspect each typed character's or correction's elapsed time since the previous key.
+In **Progress**, select **View WPM** beside a saved test to reopen its word history.
+Tests saved before this feature was added have no per-word timing data.
+
+Word WPM is the number of correctly typed characters (including a correct word-ending space for completed words), divided by five, divided by the time assigned to that word in minutes. Every typed key, separator, and backspace contributes to its word's measured time, including pauses. The first keystroke starts the overall timer, so that one unknown key interval is estimated from the median of observed intervals (or a 180 ms fallback for exceptionally short tests). Its detail view is labeled accordingly. Partial words are marked. Saved tests include their per-key intervals in the `wordHistory` field of the locally stored JSON. If result saving is disabled, the data is only visible immediately after that test.
+
+The post-test speed graph now draws shape-preserving cubic curves through the **actual measured samples**. This removes sharp line corners without altering or averaging the underlying WPM values.
