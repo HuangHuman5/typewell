@@ -28,7 +28,7 @@ Open <http://localhost:8080> in your browser. The home URL opens `practice.html`
 
 ## Upload to GitHub
 
-1. Extract `typewell-multipage.zip` on your computer.
+1. Extract `typewell-space-advance.zip` on your computer.
 2. Create a GitHub repository, or open the repository you want to use.
 3. Choose **Add file > Upload files** and upload the extracted files. Put all extracted HTML, CSS, and JavaScript files directly at the repository root, not inside another folder.
 4. Commit the upload. Do not upload only the ZIP if you want GitHub to serve the website.
@@ -119,3 +119,9 @@ Tests saved before this feature was added have no per-word timing data.
 Word WPM is the number of correctly typed characters (including a correct word-ending space for completed words), divided by five, divided by the time assigned to that word in minutes. Every typed key, separator, and backspace contributes to its word's measured time, including pauses. The first keystroke starts the overall timer, so that one unknown key interval is estimated from the median of observed intervals (or a 180 ms fallback for exceptionally short tests). Its detail view is labeled accordingly. Partial words are marked. Saved tests include their per-key intervals in the `wordHistory` field of the locally stored JSON. If result saving is disabled, the data is only visible immediately after that test.
 
 The post-test speed graph now draws shape-preserving cubic curves through the **actual measured samples**. This removes sharp line corners without altering or averaging the underlying WPM values.
+
+## Optional Space-to-advance behavior
+
+Open **Settings → Behavior** and enable **Space advances to next word**. While enabled, pressing the Space key advances to the next word even when the current word has no letters or is incomplete. Any omitted letters appear as missed in your completed test results and word-by-word WPM history; the skipped word and its Space keystroke are timed. In a word-count test, pressing Space on the final word also finishes the test.
+
+This toggle defaults to **off**, so the original behavior is unchanged until you enable it. If enabled alongside **Strict space** or **Stop on error → word**, the Space-to-advance setting takes priority for Space. The preference is saved in the same local browser storage as the rest of your settings, and is included in settings exports/imports.
