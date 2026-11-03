@@ -24,13 +24,13 @@ python -m http.server 8080
 ```
 
 If your system uses `python3`, use `python3 -m http.server 8080` instead.
-Open <http://localhost:8080> in your browser.
+Open <http://localhost:8080> in your browser. The home URL opens `practice.html`, and the navigation links to three other independent pages.
 
 ## Upload to GitHub
 
-1. Extract `typewell-github.zip` on your computer.
+1. Extract `typewell-multipage.zip` on your computer.
 2. Create a GitHub repository, or open the repository you want to use.
-3. Choose **Add file > Upload files** and upload the extracted files. Put `index.html`, `style.css`, `app.js`, and `engine.js` directly at the repository root, not inside another folder.
+3. Choose **Add file > Upload files** and upload the extracted files. Put all extracted HTML, CSS, and JavaScript files directly at the repository root, not inside another folder.
 4. Commit the upload. Do not upload only the ZIP if you want GitHub to serve the website.
 
 You can also add this folder to a repository with Git or GitHub Desktop. There are no generated dependencies or build outputs to prepare: the HTML, CSS, and JavaScript files are the complete application.
@@ -50,9 +50,13 @@ Official publishing guide: <https://docs.github.com/en/pages/getting-started-wit
 
 | File | Purpose |
 | --- | --- |
-| `index.html` | Page structure, metadata, controls, and help dialog |
+| `index.html` | Redirects the GitHub Pages root URL to Practice |
+| `practice.html` | Typing tests, virtual keyboard, adaptive coach, and drills |
+| `insights.html` | Mistake patterns, hesitation analysis, and practice suggestions |
+| `progress.html` | WPM history, personal bests, and practice journal |
+| `settings.html` | Typing behavior, themes, import and export |
 | `style.css` | Responsive styles, themes, keyboard, and test display |
-| `app.js` | Typing interactions, metrics, views, charts, and local storage |
+| `app.js` | Shared client-side logic; initializes the active page only |
 | `engine.js` | Statistical learning, pattern ranking, and drill generation |
 | `.nojekyll` | Static serving configuration for GitHub Pages |
 | `.gitignore` | Excludes common local and secret files from Git |
@@ -65,6 +69,19 @@ The coach is a statistical learning engine, not a cloud language model. It recor
 Personalized practice draws from an English word bank and weights the word mix toward your highest-impact patterns. Before enough practice data exists, a starter mix is used. The model learns from up to 100 recent completed tests. No external AI service or API key is required.
 
 WPM is correct characters divided by five, divided by elapsed minutes. Accuracy counts all character attempts, including mistakes that are later corrected. Backspace changes the current text but does not erase a mistake from the learning history. Consistency describes variation in the cumulative WPM samples collected during a test; very short tests provide limited evidence.
+
+## Four independent pages
+
+Typewell uses four real HTML pages, not hidden sections on one page:
+
+- `practice.html`: tests, adaptive coaching, typing modes, and drills.
+- `insights.html`: recurring errors, difficult sequences, and hesitation patterns.
+- `progress.html`: recent WPM chart, practice history, and data deletion.
+- `settings.html`: behavior controls, themes, and JSON import/export.
+
+The header links between those pages. The landing page, `index.html`, automatically forwards to `practice.html`. The same `engine.js`, `app.js`, and `style.css` files are shared by all pages. Clicking **Build my personal mix** on Insights opens `practice.html?drill=adaptive`, ready to type.
+
+**Your stats and preferences stay connected across pages** because they use the same `typewell-v1` browser `localStorage` key under one domain. Navigate among pages without losing saved tests or theme settings. An active unfinished test cannot be saved when you leave the page; the navigation blocks leaving during an active test.
 
 ## Storage and dependencies
 
