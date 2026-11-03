@@ -75,7 +75,7 @@ function analyzeLog(log,text,start,fixedSeconds){
     buf.push(ev.c);prev=ev.t;
     if(expected===' '||buf.length===text.length){
       const end=expected===' '?buf.length-1:buf.length;
-      words.push({w:text.slice(wordBegin,end),ms:ev.t-wordStart,e:wordErr,i:wordBegin,start:wordStart});
+      words.push({w:text.slice(wordBegin,end),ms:ev.t-wordStart,e:wordErr,i:wordBegin,start:wordStart,c:buf.length-wordBegin});
       wordBegin=buf.length;wordStart=ev.t;wordErr=0;
     }
   }
@@ -85,10 +85,27 @@ function analyzeLog(log,text,start,fixedSeconds){
   if(!samples.length||samples[samples.length-1].t<sec)samples.push({t:Math.round(sec),wpm});
   return {keys,pairs,samples,attempts,correctAttempts,sec,wpm,
           accuracy:attempts?Math.round(correctAttempts/attempts*100):100,
-          words:words.map(({w,ms,e})=>({w,ms:Math.round(ms),e}))};
+          words:words.map(({w,ms,e,c})=>({w,ms:Math.round(ms),e,c}))};
 }
 
-function chart(data,height=75){if(!data.length)return '';const max=Math.max(30,...data.map(d=>d.wpm))*1.1,w=600,pad=6;const pts=data.length===1?[[pad,height-data[0].wpm/max*(height-10)],[w-pad,height-data[0].wpm/max*(height-10)]]:data.map((d,i)=>[pad+i/(data.length-1)*(w-pad*2),height-d.wpm/max*(height-10)]);const path=pts.map(p=>p.join(',')).join(' ');return `<svg class="${height>100?'history-chart':'result-chart'}" viewBox="0 0 ${w} ${height}" preserveAspectRatio="none" role="img" aria-label="Typing speed over time"><path d="M0 ${height*.3}H600 M0 ${height*.65}H600" stroke="var(--line)" stroke-dasharray="3 5"/><polygon points="${pad},${height} ${path} ${w-pad},${height}" fill="var(--sage)" stroke="none"/><polyline points="${path}" stroke="var(--green)" stroke-width="2" fill="none" vector-effect="non-scaling-stroke"/></svg>`;}
+function smoothPath(pts){
+  if(pts.length<3)return 'M'+pts.map(p=>p.join(',')).join(' L');
+  let d=`M${pts[0][0]},${pts[0][1]}`;
+  for(let i=0;i<pts.length-1;i++){
+    const p0=pts[i-1]||pts[i],p1=pts[i],p2=pts[i+1],p3=pts[i+2]||p2;
+    const lo=Math.min(p1[1],p2[1]),hi=Math.max(p1[1],p2[1]);                 // clamp so the curve never overshoots its neighbours
+    const c1y=Math.min(hi,Math.max(lo,p1[1]+(p2[1]-p0[1])/6)),c2y=Math.min(hi,Math.max(lo,p2[1]-(p3[1]-p1[1])/6));
+    d+=` C${(p1[0]+(p2[0]-p0[0])/6).toFixed(1)},${c1y.toFixed(1)} ${(p2[0]-(p3[0]-p1[0])/6).toFixed(1)},${c2y.toFixed(1)} ${p2[0]},${p2[1].toFixed(1)}`;
+  }
+  return d;
+}
+function chart(data,height=75){if(!data.length)return '';const max=Math.max(30,...data.map(d=>d.wpm))*1.1,w=600,pad=6;const y=v=>height-v/max*(height-10);const pts=data.length===1?[[pad,y(data[0].wpm)],[w-pad,y(data[0].wpm)]]:data.map((d,i)=>[pad+i/(data.length-1)*(w-pad*2),y(d.wpm)]);const line=smoothPath(pts);return `<svg class="${height>100?'history-chart':'result-chart'}" viewBox="0 0 ${w} ${height}" preserveAspectRatio="none" role="img" aria-label="Typing speed over time"><path d="M0 ${height*.3}H600 M0 ${height*.65}H600" stroke="var(--line)" stroke-dasharray="3 5"/><path d="${line} L${pts[pts.length-1][0]},${height} L${pts[0][0]},${height}Z" fill="var(--sage)" stroke="none"/><path d="${line}" stroke="var(--green)" stroke-width="2" fill="none" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg>`;}
+function wordHistoryHTML(words){
+  const rows=words.filter(x=>x.ms>0).map(x=>({w:x.w,e:x.e,wpm:Math.round((x.c||x.w.length+1)*12000/x.ms)}));
+  if(!rows.length)return '<p class="note">No completed words in this test.</p>';
+  const avg=Math.round(rows.reduce((a,r)=>a+r.wpm,0)/rows.length),top=Math.max(...rows.map(r=>r.wpm),1);
+  return `<p class="note" style="margin:0 0 8px">${rows.length} words · average ${avg} wpm · per-word speed includes the pause before the first letter and any corrections</p><div style="max-height:240px;overflow:auto">${rows.map((r,i)=>`<div class="pattern-row"><span style="color:var(--muted);font-size:10px;min-width:22px">${i+1}</span><span class="pattern-token" style="min-width:80px;text-align:left">${r.w.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</span><span style="flex:1;height:5px;border-radius:3px;background:var(--sage)"><span style="display:block;height:100%;width:${Math.round(r.wpm/top*100)}%;border-radius:3px;background:${r.e?'var(--amber)':'var(--green)'}"></span></span><span style="min-width:62px;text-align:right">${r.wpm} wpm</span><span style="min-width:60px;text-align:right;font-size:10px;color:${r.e?'var(--amber)':'var(--muted)'}">${r.e?r.e+' miss'+(r.e===1?'':'es'):'clean'}</span></div>`).join('')}</div>`;
+}
 
 function finish(){
   if(status!=='running')return;
@@ -103,8 +120,9 @@ function finish(){
   $('#typing-input').blur();$('#typing-card').classList.remove('running');
   ['.test-meta','.live-stats','.typing-area','.test-bottom'].forEach(s=>$(s).hidden=true);
   $('#results').hidden=false;
-  $('#results').innerHTML=`<div class="results-top"><div><span class="eyebrow">ONE LITTLE STEP FORWARD</span><h2>${accuracy>=97?'That’s a lovely rhythm.':'Progress starts with showing up.'}</h2></div><span class="coach-icon">${icon('check')}</span></div><div class="result-metrics"><div><strong>${wpm}</strong><small>words / minute</small></div><div><strong>${accuracy}%</strong><small>accuracy</small></div><div><strong>${consistency}%</strong><small>consistency</small></div><div><strong>${session.errors}</strong><small>mistakes</small></div></div>${chart(samples)}<div class="chart-label"><span>speed throughout your test</span><span>${session.seconds}s · ${attempts} keystrokes</span></div><div class="result-actions"><button class="primary" id="result-drill">Practice my patterns ${icon('sparkles')}</button><button class="secondary" id="next-test">Another test ${icon('arrow')}</button></div>`;
+  $('#results').innerHTML=`<div class="results-top"><div><span class="eyebrow">ONE LITTLE STEP FORWARD</span><h2>${accuracy>=97?'That’s a lovely rhythm.':'Progress starts with showing up.'}</h2></div><span class="coach-icon">${icon('check')}</span></div><div class="result-metrics"><div><strong>${wpm}</strong><small>words / minute</small></div><div><strong>${accuracy}%</strong><small>accuracy</small></div><div><strong>${consistency}%</strong><small>consistency</small></div><div><strong>${session.errors}</strong><small>mistakes</small></div></div>${chart(samples)}<div class="chart-label"><span>speed throughout your test</span><span>${session.seconds}s · ${attempts} keystrokes</span></div><div id="word-history" hidden style="padding:4px 0 14px">${wordHistoryHTML(words)}</div><div class="result-actions"><button class="primary" id="result-drill">Practice my patterns ${icon('sparkles')}</button><button class="secondary" id="toggle-words" aria-expanded="false">Word history</button><button class="secondary" id="next-test">Another test ${icon('arrow')}</button></div>`;
   $('#result-drill').onclick=()=>startDrill('adaptive');
+  $('#toggle-words').onclick=e=>{const box=$('#word-history'),open=box.hidden;box.hidden=!open;e.currentTarget.setAttribute('aria-expanded',open);e.currentTarget.textContent=open?'Hide word history':'Word history';};
   $('#next-test').onclick=()=>{kind='normal';focus=[];reset();$('#typing-input').focus();};
   buildKeyboard();renderCoach();updateDays();
 }
